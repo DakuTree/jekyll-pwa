@@ -10,4 +10,6 @@ Gem::Specification.new do |s|
   s.homepage    =
     'https://github.com/lavas-project/jekyll-pwa'
   s.license       = 'MIT'
+
+  s.add_runtime_dependency "uglifier"
 end

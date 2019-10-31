@@ -1,3 +1,4 @@
+require 'uglifier'
 class SWHelper
     WORKBOX_VERSION = 'v3.6.3'
     def initialize(site, config)
@@ -5,13 +6,25 @@ class SWHelper
         @config = config
         @sw_filename = @config['sw_dest_filename'] || 'service-worker.js'
         @sw_src_filepath = @config['sw_src_filepath'] || 'service-worker.js'
+
+        @register_script =
+        <<-SCRIPT
+                window.onload = function () {
+                    var script = document.createElement('script');
+                    var firstScript = document.getElementsByTagName('script')[0];
+                    script.type = 'text/javascript';
+                    script.async = true;
+                    script.src = '%PAGEURL%/sw-register.js?v=' + Date.now();
+                    firstScript.parentNode.insertBefore(script, firstScript);
+                };
+        SCRIPT
     end
 
     def write_sw_register()
         sw_register_filename = 'sw-register.js'
         sw_register_file = File.new(@site.in_dest_dir(sw_register_filename), 'w')
         # add build version in url params
-        sw_register_file.puts(
+        sw_register_file_script =
         <<-SCRIPT
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('#{@site.baseurl.to_s}/#{@sw_filename}?v=#{@site.time.to_i.to_s}').then(function(reg) {
@@ -34,7 +47,8 @@ class SWHelper
             });
         }
         SCRIPT
-        )
+
+        sw_register_file.puts(Uglifier.new.compile(sw_register_file_script))
         sw_register_file.close
     end
 
@@ -130,17 +144,11 @@ class SWHelper
     end
 
     def self.insert_sw_register_into_body(page)
+        script = Uglifier.new.compile(@register_script.sub('%PAGEURL%', page.site.baseurl.to_s))
         page.output = page.output.sub('</body>',
         <<-SCRIPT
             <script>
-                window.onload = function () {
-                    var script = document.createElement('script');
-                    var firstScript = document.getElementsByTagName('script')[0];
-                    script.type = 'text/javascript';
-                    script.async = true;
-                    script.src = '#{page.site.baseurl.to_s}/sw-register.js?v=' + Date.now();
-                    firstScript.parentNode.insertBefore(script, firstScript);
-                };
+                #{script}
             </script>
             </body>
         SCRIPT
