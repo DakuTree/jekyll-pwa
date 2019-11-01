@@ -1,23 +1,24 @@
 require 'uglifier'
 class SWHelper
     WORKBOX_VERSION = 'v3.6.3'
+    REGISTER_SCRIPT = Uglifier.new.compile(
+    <<-SCRIPT
+            window.onload = function () {
+                var script = document.createElement('script');
+                var firstScript = document.getElementsByTagName('script')[0];
+                script.type = 'text/javascript';
+                script.async = true;
+                script.src = '%PAGEURL%/sw-register.js?v=' + Date.now();
+                firstScript.parentNode.insertBefore(script, firstScript);
+            };
+    SCRIPT
+    )
+
     def initialize(site, config)
         @site = site
         @config = config
         @sw_filename = @config['sw_dest_filename'] || 'service-worker.js'
         @sw_src_filepath = @config['sw_src_filepath'] || 'service-worker.js'
-
-        @register_script =
-        <<-SCRIPT
-                window.onload = function () {
-                    var script = document.createElement('script');
-                    var firstScript = document.getElementsByTagName('script')[0];
-                    script.type = 'text/javascript';
-                    script.async = true;
-                    script.src = '%PAGEURL%/sw-register.js?v=' + Date.now();
-                    firstScript.parentNode.insertBefore(script, firstScript);
-                };
-        SCRIPT
     end
 
     def write_sw_register()
@@ -148,7 +149,7 @@ class SWHelper
     end
 
     def self.insert_sw_register_into_body(page)
-        script = Uglifier.new.compile(@register_script.sub('%PAGEURL%', page.site.baseurl.to_s))
+        script = SWHelper::REGISTER_SCRIPT.sub('%PAGEURL%', page.site.baseurl.to_s)
         page.output = page.output.sub('</body>',
         <<-SCRIPT
             <script>
