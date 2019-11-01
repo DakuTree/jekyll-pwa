@@ -124,9 +124,13 @@ class SWHelper
         .join(",")
 
         # write service-worker.js
-        sw_src_file_str = File.read(@site.in_source_dir(@sw_src_filepath))
+        full_src_filepath = @site.in_source_dir(@sw_src_filepath)
+        if not File.file?(full_src_filepath)
+            full_src_filepath = @site.in_theme_dir(@sw_src_filepath)
+        end
+        sw_src_file_str = File.read(@site.in_theme_dir(full_src_filepath))
         workbox_dir = File.join(@site.baseurl.to_s, dest_js_directory, "workbox-#{SWHelper::WORKBOX_VERSION}")
-        import_scripts_str = 
+        import_scripts_str =
         <<-SCRIPT
             importScripts("#{workbox_dir}/workbox-sw.js");
             workbox.setConfig({modulePathPrefix: "#{workbox_dir}"});
